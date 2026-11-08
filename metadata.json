@@ -1,0 +1,6 @@
+{
+  "name": "Messenger",
+  "description": "Real-time messenger app allowing anyone to connect and chat with friends with custom profile setup, instant messaging, and conversations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

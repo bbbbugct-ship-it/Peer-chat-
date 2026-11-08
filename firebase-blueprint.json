@@ -1,0 +1,133 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile representation in the messenger network.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The unique Firebase Auth UID."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User's public name."
+        },
+        "username": {
+          "type": "string",
+          "description": "Unique messenger handle."
+        },
+        "bio": {
+          "type": "string",
+          "description": "User status message or bio."
+        },
+        "avatarColor": {
+          "type": "string",
+          "description": "Hex color or theme key for profile icon."
+        },
+        "appPassword": {
+          "type": "string",
+          "description": "User configured in-app security password/PIN."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["online", "offline", "away"],
+          "description": "Presence state."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Account registration timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Profile update timestamp."
+        }
+      },
+      "required": ["userId", "displayName", "username"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "One-on-one or group chat thread metadata.",
+      "type": "object",
+      "properties": {
+        "participantIds": {
+          "type": "array",
+          "description": "List of participant user IDs."
+        },
+        "participantNames": {
+          "type": "object",
+          "description": "Map of user ID to display name."
+        },
+        "lastMessage": {
+          "type": "string",
+          "description": "Snippet of latest message."
+        },
+        "lastMessageSenderId": {
+          "type": "string",
+          "description": "UID of last sender."
+        },
+        "lastMessageAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of latest activity."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["participantIds"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Chat message item inside a conversation.",
+      "type": "object",
+      "properties": {
+        "conversationId": {
+          "type": "string"
+        },
+        "senderId": {
+          "type": "string"
+        },
+        "senderName": {
+          "type": "string"
+        },
+        "participantIds": {
+          "type": "array",
+          "description": "Denormalized participants for subcollection latency exception."
+        },
+        "text": {
+          "type": "string"
+        },
+        "reactions": {
+          "type": "object"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["conversationId", "senderId", "senderName", "participantIds", "text"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles searchable by name or username."
+    },
+    "/conversations/{conversationId}": {
+      "schema": "Conversation",
+      "description": "Chat threads between participants."
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Individual messages in a chat thread."
+    }
+  }
+}

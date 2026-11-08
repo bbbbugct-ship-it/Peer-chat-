@@ -1,0 +1,67 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 50 &&
+             data.username is string && data.username.size() >= 1 && data.username.size() <= 30 &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() <= 200)) &&
+             (!('avatarColor' in data) || (data.avatarColor is string && data.avatarColor.size() <= 20)) &&
+             (!('appPassword' in data) || (data.appPassword is string && data.appPassword.size() <= 50)) &&
+             (!('status' in data) || (data.status is string && (data.status == 'online' || data.status == 'offline' || data.status == 'away'))) &&
+             (!('createdAt' in data) || (data.createdAt is timestamp && data.createdAt <= request.time)) &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidConversation(data) {
+      return data.participantIds is list && data.participantIds.size() >= 2 && data.participantIds.size() <= 10 &&
+             (request.auth.uid in data.participantIds) &&
+             (!('lastMessage' in data) || (data.lastMessage is string && data.lastMessage.size() <= 500)) &&
+             (!('lastMessageSenderId' in data) || (data.lastMessageSenderId is string)) &&
+             (!('participantNames' in data) || data.participantNames is map) &&
+             (!('lastMessageAt' in data) || (data.lastMessageAt is timestamp && data.lastMessageAt <= request.time)) &&
+             (!('createdAt' in data) || (data.createdAt is timestamp && data.createdAt <= request.time)) &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidMessage(data) {
+      return data.conversationId is string &&
+             data.senderId is string && data.senderId == request.auth.uid &&
+             data.senderName is string && data.senderName.size() >= 1 && data.senderName.size() <= 50 &&
+             data.participantIds is list && data.participantIds.size() >= 2 && data.participantIds.size() <= 10 &&
+             (request.auth.uid in data.participantIds) &&
+             data.text is string && data.text.size() >= 1 && data.text.size() <= 2000 &&
+             (!('reactions' in data) || data.reactions is map) &&
+             (!('createdAt' in data) || (data.createdAt is timestamp && data.createdAt <= request.time));
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isOwner(userId) && isValidUserProfile(request.resource.data);
+      allow delete: if false;
+    }
+
+    match /conversations/{conversationId} {
+      allow read: if isAuthenticated() && (request.auth.uid in resource.data.participantIds);
+      allow create: if isAuthenticated() && (request.auth.uid in request.resource.data.participantIds) && isValidConversation(request.resource.data);
+      allow update: if isAuthenticated() && (request.auth.uid in resource.data.participantIds) && (request.auth.uid in request.resource.data.participantIds) && isValidConversation(request.resource.data);
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && (request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds);
+        allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid && (request.auth.uid in request.resource.data.participantIds) && isValidMessage(request.resource.data);
+        allow update: if isAuthenticated() && (request.auth.uid in request.resource.data.participantIds) && isValidMessage(request.resource.data);
+        allow delete: if isAuthenticated() && resource.data.senderId == request.auth.uid;
+      }
+    }
+  }
+}
